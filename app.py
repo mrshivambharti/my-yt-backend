@@ -7,7 +7,7 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return "Server is Running! Shivam's Backend is Live."
+    return "Shivam's Server is UP and Running!"
 
 @app.route('/download', methods=['POST'])
 def download_video():
@@ -17,43 +17,63 @@ def download_video():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
+    # 🔴 YAHAN MAGIC FIX KIYA HAI 🔴
+    # Hum YouTube ko bol rahe hain ki hum 'Android' client hain
     ydl_opts = {
         'format': 'best',
         'quiet': True,
         'no_warnings': True,
+        'nocheckcertificate': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+            }
+        }
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Info extract karo
             info = ydl.extract_info(url, download=False)
             
-            # Data extract karna
             title = info.get('title', 'Video')
             thumbnail = info.get('thumbnail', '')
             
-            # Video Links (With Audio)
+            # Formats filter karo
             formats = []
-            for f in info['formats']:
-                if f.get('ext') == 'mp4' and f.get('acodec') != 'none':
-                    formats.append({
-                        'quality': f.get('format_note', 'Standard'),
-                        'url': f['url']
-                    })
             
-            # Best formats ko filter karke last 2-3 hi dikhayenge taaki user confuse na ho
-            clean_formats = formats[-3:] 
+            # Sirf wo formats lo jisme video + audio dono ho (url check)
+            for f in info['formats']:
+                if f.get('url'): 
+                    # Logic: Mp4 extension aur Audio codec hona chahiye
+                    if f.get('ext') == 'mp4' and f.get('acodec') != 'none':
+                        formats.append({
+                            'quality': f.get('format_note', 'HD'),
+                            'url': f['url']
+                        })
+            
+            # Agar direct combo nahi mila, toh best available URL bhej do
+            if not formats:
+                formats.append({
+                    'quality': 'Standard',
+                    'url': info['url'] # Fallback
+                })
+
+            # Sirf last 2 best quality bhejo
+            clean_formats = formats[-2:] 
 
             return jsonify({
                 'status': 'success',
                 'title': title,
                 'thumbnail': thumbnail,
                 'formats': clean_formats,
-                # Audio Only Link (MP3 approach)
                 'audio_url': info['formats'][0]['url'] # Fallback audio
             })
 
     except Exception as e:
-        return jsonify({'error': 'Invalid URL or YouTube Blocked Request'}), 500
+        # Error print karega logs mein taaki hum pakad sakein
+        print(f"ERROR: {str(e)}")
+        return jsonify({'error': 'YouTube Blocked this Server IP. Try again in 5 mins.'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
