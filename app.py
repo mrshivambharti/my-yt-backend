@@ -25,9 +25,9 @@ def download_video():
         title = yt.title
         thumbnail = yt.thumbnail_url
 
-        # Sabse safe quality (720p/360p with Audio) nikalna
-        # Ye bina FFmpeg ke bhi chalti hai
-        video_stream = yt.streams.get_highest_resolution()
+        # Sabse safe quality (Highest Resolution jo available ho)
+        # Note: Server par 1080p merge karna mushkil hota hai, isliye hum 'progressive' stream lenge
+        stream = yt.streams.get_highest_resolution()
         
         # Audio Only Stream
         audio_stream = yt.streams.get_audio_only()
@@ -38,8 +38,8 @@ def download_video():
             'thumbnail': thumbnail,
             'formats': [
                 {
-                    'quality': f"{video_stream.resolution} (Best Safe)",
-                    'url': video_stream.url
+                    'quality': f"{stream.resolution} (Download Ready)",
+                    'url': stream.url
                 }
             ],
             'audio_url': audio_stream.url
@@ -47,7 +47,7 @@ def download_video():
 
     except Exception as e:
         print(f"Error: {e}")
-        # Agar error aaye to user ko dikhayein
+        # Asli error user ko dikhao taaki hum fix kar sakein
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
